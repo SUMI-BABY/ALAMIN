@@ -399,34 +399,4 @@ async function fbDownloader(url) {
     eval(evalCode);
     html = html.split('innerHTML = "')[1].split('";\n')[0].replace(/\\"/g, '"');
 
-    const $ = cheerio.load(html);
-    const download = [];
-
-    const tbody = $('table').find('tbody');
-    const trs = tbody.find('tr');
-
-    trs.each(function (i, elem) {
-      const trElement = $(elem);
-      const tds = trElement.children();
-      const quality = $(tds[0]).text().trim();
-      const url = $(tds[2]).children('a').attr('href');
-      if (url != undefined) {
-        download.push({
-          quality,
-          url
-        });
-      }
-    });
-
-    return {
-      success: true,
-      video_length: $("div.clearfix > p").text().trim(),
-      download
-    };
-  } catch (err) {
-    console.error('Error in Facebook Downloader:', err);
-    return {
-      success: false
-    };
-  }
-}
+    con
