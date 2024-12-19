@@ -1,93 +1,64 @@
 const axios = require('axios');
-const tracker = {};
 
-/*
-A Turtle APIs Production created by Turtle Rehat.
-Do not alter the credited information any attempt to do so may result in a permanent ban from Project86 APIs and Turtle APIs.
-*/
+const Prefixes = [
+  'ai'
+];
 
 module.exports = {
-	config: {
-		name: "bayot",
-		version: "1.0",
-		author: "rehat--",
-		countDown: 5,
-		role: 0,
-		longDescription: "Chat GPT 4 Most Advance LLM",
-		category: "ai",
-		guide: { en: "{pn} <query>" },
-	},
-	clearHistory: function () {
-		global.GoatBot.onReply.clear();
-	},
-	onStart: async function ({ message, event, args, usersData, api, commandName }) {
-		const prompt = args.join(' ');
-		const userID = event.senderID;
-		const mid = event.messageID;
+  config: {
+    name: 'ai',
+    version: '2.5',
+    author: 'JV Barcenas | ncs pro', // do not change
+    role: 0,
+    category: 'ai',
+    shortDescription: {
+      en: 'Asks gemini AI for an answer.',
+    },
+    longDescription: {
+      en: 'Asks gemini AI for an answer based on the user prompt.',
+    },
+    guide: {
+      en: '{pn} [prompt]',
+    },
+  },
+  onStart: async function () {},
+  onChat: async function ({ api, event, args, message }) {
+    try {
+      const prefix = Prefixes.find((p) => event.body && event.body.toLowerCase().startsWith(p));
 
-		if (!args[0]) return message.reply('Please enter a query.');
+      if (!prefix) {
+        return; 
+      }
 
-		if (args[0] == 'clear') {
-			this.clearHistory();
-			const c = await clean(userID);
-			if (c) return message.reply('Conversation history cleared.');
-		}
+      const prompt = event.body.substring(prefix.length).trim();
 
-		api.setMessageReaction('⏳', mid, () => {}, true);
-		gpt(prompt, userID, message, mid, api);
-	},
+      if (prompt === '') {
+        await message.reply(
+          "Hello I'm Alamin how can I help you dear 💘."
+        );
+        return;
+      }
 
-	onReply: async function ({ Reply, message, event, args, api, usersData }) {
-		const { author } = Reply;
-		if (author !== event.senderID) return;
 
-		const mid = event.messageID;
-		const prompt = args.join(' ');
-		const userID = event.senderID;
+      await message.reply("Alamin answering your question. Please wait a moment 💘...");
 
-		if (args[0] == 'clear') {
-			this.clearHistory();
-			const c = await clean(userID);
-			if (c) return message.reply('Conversation history cleared.');
-		}
+      const response = await axios.get(`https://hercai.onrender.com/GEMINI/hercai?question=${encodeURIComponent(prompt)}`);
 
-		api.setMessageReaction('⏳', mid, () => {}, true);
-		gpt(prompt, userID, message, mid, api);
-	}
+      if (response.status !== 200 || !response.data) {
+        throw new Error('Invalid or missing response from API');
+      }
+
+      const messageText = response.data.reply;
+
+      await message.reply(messageText);
+
+      console.log('Sent answer as a reply to user');
+    } catch (error) {
+      console.error(`Failed to get answer: ${error.message}`);
+      api.sendMessage(
+        `${error.message}.\ou can try typing your question again or resending it, as there might be a bug from the server that's causing the problem. It might resolve the issue.`,
+        event.threadID
+      );
+    }
+  },
 };
-
-async function clean(userID) {
-	if (!tracker[userID]) return true;
-	if (tracker[userID]) {
-		delete tracker[userID];
-		return true;
-	}
-}
-
-async function gpt(text, userID, message, mid, api) {
-	tracker[userID] = tracker[userID] || '';
-	tracker[userID] += `${text}.\n`;
-
-	try {
-		const url = 'https://project86.cyclic.app/api/chat';
-
-		const conversationHistory = encodeURIComponent(tracker[userID]);
-		const getUrl = `${url}?query=${conversationHistory}`;
-
-		const response = await axios.post(getUrl);
-
-		const resultText = response.data.answer;
-		tracker[userID] = `${tracker[userID]}${text}.\n${resultText}`;
-
-		api.setMessageReaction('✅', mid, () => {}, true);
-		message.reply(`${resultText}\n\n𝙔𝙤𝙪 𝙘𝙖𝙣 𝙧𝙚𝙥𝙡𝙮 𝙩𝙤 𝙘𝙤𝙣𝙩𝙞𝙣𝙪𝙚 𝙘𝙝𝙖𝙩𝙩𝙞𝙣𝙜.`, (error, info) => {
-			global.GoatBot.onReply.set(info.messageID, {
-				commandName: 'ai',
-				author: userID,
-			});
-		});
-	} catch (error) {
-		api.setMessageReaction('❌', mid, () => {}, true);
-		message.reply('An error occurred.');
-	}
-}
